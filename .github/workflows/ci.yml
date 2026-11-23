@@ -156,7 +156,7 @@ jobs:
       - uses: docker/setup-buildx-action@v3
 
       - name: Build backend image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./backend
           push: false
@@ -173,7 +173,7 @@ jobs:
           "require('sharp')({create:{width:8,height:8,channels:3,background:'#fff'}}).jpeg().toBuffer().then(b=>console.log('sharp ok',b.length))"
 
       - name: Build frontend image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./frontend
           push: false
