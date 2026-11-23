@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Production
+dist/
+build/
+
+# Build caches
+*.tsbuildinfo
+.eslintcache
+.vite/
+.turbo/
+
+# Runtime artifacts
+logs/
+*.log
+backend/uploads/*
+!backend/uploads/.gitkeep
+tools/qa/report/
+
+# Misc
+.DS_Store
+Thumbs.db
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env files — .env.example is tracked on purpose
+.env
+.env.*
+!.env.example
+# Placeholders only (CHANGE_ME); the filled-in copy lives on the server as backend/.env
+!.env.production.example
+
+# IDEs
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo

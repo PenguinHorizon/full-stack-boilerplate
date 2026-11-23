@@ -1,0 +1,200 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens.
+ *
+ * Utilities are SEMANTIC (`bg-surface`, `text-ink-muted`, `bg-accent`,
+ * `rounded-field`…) and resolve to CSS variables. Each app scope below sets
+ * those variables, so one set of primitives renders as:
+ *   - admin       → calm neutral SaaS palette with a fixed indigo accent
+ *   - storefront  → warm "paper" neutrals + the organization's brand colours,
+ *                   injected at runtime (apps/storefront/theme/brand-theme.ts)
+ *   - platform    → the same paper neutrals with an ink accent
+ */
+@theme inline {
+  --font-sans: var(--app-font-sans);
+  --font-display: var(--app-font-display);
+
+  --color-canvas: var(--app-canvas);
+  --color-surface: var(--app-surface);
+  --color-surface-muted: var(--app-surface-muted);
+  --color-ink: var(--app-ink);
+  --color-ink-muted: var(--app-ink-muted);
+  --color-ink-subtle: var(--app-ink-subtle);
+  --color-line: var(--app-line);
+  --color-line-strong: var(--app-line-strong);
+  --color-accent: var(--app-accent);
+  --color-accent-hover: var(--app-accent-hover);
+  --color-accent-soft: var(--app-accent-soft);
+  --color-on-accent: var(--app-on-accent);
+  --color-highlight: var(--app-highlight);
+  --color-on-highlight: var(--app-on-highlight);
+  --color-focus: var(--app-focus);
+
+  --color-success: #15803d;
+  --color-success-soft: #dcfce7;
+  --color-warning: #b45309;
+  --color-warning-soft: #fef3c7;
+  --color-danger: #b91c1c;
+  --color-danger-soft: #fee2e2;
+  --color-info: #1d4ed8;
+  --color-info-soft: #dbeafe;
+
+  --radius-field: var(--app-radius-field);
+  --radius-control: var(--app-radius-control);
+  --radius-card: var(--app-radius-card);
+
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.05);
+  --shadow-raised: 0 4px 12px rgb(16 24 40 / 0.08);
+  --shadow-overlay: 0 12px 40px rgb(16 24 40 / 0.18);
+}
+
+/* Shared defaults (also used before an app scope is applied). */
+:root {
+  --app-font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --app-font-display: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --app-canvas: #f7f8fa;
+  --app-surface: #ffffff;
+  --app-surface-muted: #f1f3f6;
+  --app-ink: #0f172a;
+  --app-ink-muted: #475569;
+  --app-ink-subtle: #5b6577; /* ≥ 4.5:1 on canvas and muted surfaces (WCAG AA) */
+  --app-line: #e2e8f0;
+  --app-line-strong: #cbd5e1;
+  --app-accent: #4f46e5;
+  --app-accent-hover: #4338ca;
+  --app-accent-soft: #eef2ff;
+  --app-on-accent: #ffffff;
+  --app-highlight: #4f46e5;
+  --app-on-highlight: #ffffff;
+  --app-focus: #6366f1;
+  --app-radius-field: 0.5rem;
+  --app-radius-control: 0.5rem;
+  --app-radius-card: 0.75rem;
+}
+
+/* ── Admin portal: quiet SaaS ────────────────────────────────────────── */
+[data-app="admin"] {
+  color-scheme: light;
+}
+
+/* ── Storefront: editorial warmth + organization brand ─────────────────── */
+[data-app="storefront"] {
+  color-scheme: light;
+  --app-font-display: "Fraunces Variable", ui-serif, Georgia, serif;
+  --app-canvas: #fbf8f3;
+  --app-surface: #ffffff;
+  --app-surface-muted: #f4efe7;
+  --app-ink: #1c1a17;
+  --app-ink-muted: #57524a;
+  --app-ink-subtle: #6b655b;
+  --app-line: #e8e1d6;
+  --app-line-strong: #d6ccbc;
+  /* Brand variables are set on <html> by applyBrandTheme(). */
+  --app-accent: var(--brand, #c8553d);
+  --app-accent-hover: var(--brand-hover, #a9442f);
+  --app-accent-soft: var(--brand-soft, #f8e7e2);
+  --app-on-accent: var(--brand-contrast, #ffffff);
+  --app-highlight: var(--brand-accent, #e9b44c);
+  --app-on-highlight: var(--brand-accent-contrast, #1c1a17);
+  --app-focus: var(--brand, #c8553d);
+  --app-radius-field: 0.75rem;
+  --app-radius-control: 9999px;
+  --app-radius-card: 1rem;
+}
+
+/* ── Platform directory ──────────────────────────────────────────────── */
+[data-app="platform"] {
+  color-scheme: light;
+  --app-font-display: "Fraunces Variable", ui-serif, Georgia, serif;
+  --app-canvas: #fbf8f3;
+  --app-surface: #ffffff;
+  --app-surface-muted: #f4efe7;
+  --app-ink: #1c1a17;
+  --app-ink-muted: #57524a;
+  --app-ink-subtle: #6b655b;
+  --app-line: #e8e1d6;
+  --app-line-strong: #d6ccbc;
+  --app-accent: #1c1a17;
+  --app-accent-hover: #3a352e;
+  --app-accent-soft: #efe9df;
+  --app-on-accent: #ffffff;
+  --app-highlight: #e9b44c;
+  --app-on-highlight: #1c1a17;
+  --app-focus: #1c1a17;
+  --app-radius-field: 0.75rem;
+  --app-radius-control: 9999px;
+  --app-radius-card: 1rem;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--app-canvas);
+    color: var(--app-ink);
+    font-family: var(--app-font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Visible keyboard focus everywhere, in the app's own colour. */
+  :focus-visible {
+    outline: 2px solid var(--app-focus);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--app-accent-soft);
+    color: var(--app-ink);
+  }
+}
+
+@layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Respect the OS "reduce motion" setting for every transition/animation. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Printable views (admin): when a page holds a `.print-area`, print only it. */
+@media print {
+  body:has(.print-area) * {
+    visibility: hidden;
+  }
+  body:has(.print-area) .print-area,
+  body:has(.print-area) .print-area * {
+    visibility: visible;
+  }
+  body:has(.print-area) .print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 80mm;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+  }
+}

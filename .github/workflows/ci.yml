@@ -1,0 +1,201 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+# A new push supersedes an in-flight run for the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  backend:
+    name: Backend (lint, build, test)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: root_password
+          MYSQL_DATABASE: app_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot_password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      NODE_ENV: test
+      PORT: 3003
+      DATABASE_HOST: 127.0.0.1
+      DATABASE_PORT: 3306
+      DATABASE_USER: root
+      DATABASE_PASS: root_password
+      DATABASE_NAME: app_test
+      # 48 chars: env validation enforces a 32-character minimum.
+      JWT_SECRET: ci_test_secret_value_that_is_long_enough_000000
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      JWT_ISSUER: fullstack-boilerplate
+      JWT_AUDIENCE: fullstack-boilerplate-client
+      ALLOWED_ORIGINS: http://localhost:5173
+      APP_URL: http://localhost:5173
+      PLATFORM_DOMAIN: localhost
+      COOKIE_SECURE: 'false'
+      COOKIE_SAMESITE: lax
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      # No --legacy-peer-deps: the dependency tree resolves cleanly now.
+      - name: Install
+        working-directory: backend
+        run: npm ci
+
+      # `lint` no longer carries --fix, so it can actually fail the build
+      # instead of silently rewriting files in the runner.
+      - name: Lint
+        working-directory: backend
+        run: npm run lint
+
+      - name: Format check
+        working-directory: backend
+        run: npm run format:check
+
+      - name: Build
+        working-directory: backend
+        run: npm run build
+
+      # Frontend types are generated from backend contracts; fail if stale.
+      - name: API contracts are current
+        working-directory: backend
+        run: npm run check:contracts
+
+      - name: Unit tests
+        working-directory: backend
+        run: npm test -- --ci --coverage
+
+      - name: Run migrations
+        working-directory: backend
+        run: npm run migration:run
+
+      # Entities must match what the migrations built (no schema drift).
+      - name: Verify schema
+        working-directory: backend
+        run: npm run db:verify
+
+      - name: E2E tests
+        working-directory: backend
+        run: npm run test:e2e
+
+  frontend:
+    name: Frontend (lint, build, test)
+    runs-on: ubuntu-latest
+
+    env:
+      VITE_API_URL: /api/v1
+      VITE_PLATFORM_DOMAIN: localhost
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Typecheck
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Format check
+        working-directory: frontend
+        run: npm run format:check
+
+      - name: Unit tests
+        working-directory: frontend
+        run: npm test
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+  docker:
+    name: Docker images build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: false
+          load: true
+          tags: app-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # sharp is a native module: prove the Alpine (musl) binary was installed
+      # and can encode, or uploads would fail only in production.
+      - name: API image can process images
+        run: >
+          docker run --rm app-api:ci node -e
+          "require('sharp')({create:{width:8,height:8,channels:3,background:'#fff'}}).jpeg().toBuffer().then(b=>console.log('sharp ok',b.length))"
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: false
+          load: true
+          tags: app-web:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The deployment files can't be exercised by unit tests; check that each
+      # one is at least accepted by the tool that will read it.
+      - name: Web container nginx config is valid
+        run: docker run --rm app-web:ci nginx -t
+
+      - name: Edge Caddyfile is valid
+        run: >
+          docker run --rm -e ACME_EMAIL=ops@example.com
+          -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro"
+          caddy:2 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+      - name: Production compose overlay resolves
+        run: |
+          cp backend/.env.example backend/.env
+          JWT_SECRET=ci-placeholder-secret-of-sufficient-length-0123456789 \
+          ACME_EMAIL=ops@example.com \
+          docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml config --quiet

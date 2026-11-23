@@ -1,0 +1,36 @@
+# Edge: TLS for the platform, every organization subdomain and organizations' own
+# domains, in front of the `web` container (docs/deployment.md).
+#
+# Certificates are obtained on the first visit to a host ("on-demand"), but
+# only after the API confirms the platform serves it: the platform domain, a
+# subdomain of an existing organization, or a custom domain an operator marked
+# verified. Anything else gets no certificate (GET .../sites/tls-check → 404).
+#
+# Many organization subdomains? Prefer one wildcard certificate via the DNS
+# challenge (see "Wildcard certificate" in docs/deployment.md) to stay well
+# inside the certificate authority's rate limits.
+{
+	email {$ACME_EMAIL}
+	on_demand_tls {
+		ask http://web/api/v1/public/sites/tls-check
+	}
+}
+
+https:// {
+	tls {
+		on_demand
+	}
+
+	encode zstd gzip
+
+	header {
+		# One year of HTTPS-only. No includeSubDomains: an organization's own
+		# domain may have other subdomains (mail, shop) that are not ours.
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+
+	# Sets X-Forwarded-For/-Proto/-Host; the web container passes them on and
+	# the API trusts them from private networks only (TRUST_PROXY).
+	reverse_proxy web:80
+}

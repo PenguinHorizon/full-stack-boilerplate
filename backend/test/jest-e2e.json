@@ -1,0 +1,20 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "..",
+  "roots": ["<rootDir>/test"],
+  "testEnvironment": "node",
+  "testRegex": ".e2e-spec.ts$",
+  "setupFiles": ["<rootDir>/test/e2e-env.ts"],
+  "transform": {
+    "^.+\\.(t|j)s$": ["ts-jest", { "tsconfig": "<rootDir>/tsconfig.json" }]
+  },
+  "moduleNameMapper": {
+    "^@common/(.*)$": "<rootDir>/src/common/$1",
+    "^@database/(.*)$": "<rootDir>/src/database/$1",
+    "^@modules/(.*)$": "<rootDir>/src/modules/$1",
+    "^@contracts/(.*)$": "<rootDir>/src/contracts/$1"
+  },
+  "//": "Booting the real AppModule (DI graph + MySQL connect), TRUNCATEing between tests and the per-route isolation matrix do not fit in Jest's 5s default; 60s leaves room on a loaded machine.",
+  "testTimeout": 60000,
+  "maxWorkers": 1
+}

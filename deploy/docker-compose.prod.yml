@@ -1,0 +1,65 @@
+# Production overlay (docs/deployment.md):
+#
+#   docker compose --env-file backend/.env \
+#     -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --build
+#
+# `--env-file` matters: PLATFORM_DOMAIN and JWT_SECRET are read from it for
+# the ${...} placeholders, and PLATFORM_DOMAIN is baked into the web build.
+#
+# Adds the TLS edge (Caddy) and keeps everything else private: only ports 80
+# and 443 are published, on the edge. Needs Docker Compose 2.24.4+ (`!reset`,
+# `!override`).
+
+# Fixed project name, so volumes are always rms_mysql_data, rms_uploads_data
+# and rms_caddy_data whatever the checkout folder is called (backups use them).
+name: rms
+
+# Docker keeps container logs forever by default; cap them per service.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: '20m'
+    max-file: '5'
+
+services:
+  edge:
+    image: caddy:2
+    restart: unless-stopped
+    logging: *logging
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      ACME_EMAIL: '${ACME_EMAIL:?set ACME_EMAIL (certificate expiry notices)}'
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates and keys: keep this volume (and back it up), or every
+      # restart re-issues certificates and meets the authority's rate limits.
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
+  web:
+    ports: !reset []
+    logging: *logging
+
+  api:
+    ports: !reset []
+    logging: *logging
+    environment:
+      # Requests arrive through edge → web → api on the Docker network.
+      TRUST_PROXY: 'loopback, linklocal, uniquelocal'
+      COOKIE_SECURE: 'true'
+
+  db:
+    logging: *logging
+    # Loopback only, for backups and maintenance run on the server itself
+    # (docs/operations.md); never reachable from another machine.
+    ports: !override
+      - '127.0.0.1:${DATABASE_PORT_HOST:-3307}:3306'
+
+volumes:
+  caddy_data:
+  caddy_config:
