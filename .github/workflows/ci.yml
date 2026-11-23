@@ -57,7 +57,7 @@ jobs:
       COOKIE_SAMESITE: lax
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         with:
@@ -115,7 +115,7 @@ jobs:
       VITE_PLATFORM_DOMAIN: localhost
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         with:
@@ -151,7 +151,7 @@ jobs:
     name: Docker images build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: docker/setup-buildx-action@v3
 
